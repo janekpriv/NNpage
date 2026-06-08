@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Jan Michorek" />
+  <title>Perceptron i MLP</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+   pre {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 1em;
+  overflow-x: auto;
+  font-family: monospace;
+}
+code {
+  background-color: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+  </style>
+  <script defer=""
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+  type="text/javascript"></script>
+ <script>
+MathJax = {
+  tex: {
+    macros: {
+      bm: ["\\boldsymbol{#1}", 1]
+    }
+  }
+};
+</script>
+
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Perceptron i MLP</h1>
+<p class="author">Jan Michorek</p>
+</header>
+<h1 id="wprowadzenie-do-teorii-sieci-neuronowych">Wprowadzenie do teorii
+sieci neuronowych</h1>
+<p>Sieći neuronowe (NN) to złożone i wielowarstwowe systemy
+obliczeniowe, powstają one poprzez połączenie podstawowych jednostek,
+które nazywamy neuronami. Opisywane przeze mnie rodzaje sieci bedą
+rozwinięciem ideii NN. Aby zrozumieć działanie sieci i jej zamysł,
+należy sie skupić na pojedyńczym jej elemencie.</p>
+<h2 id="podstawowa-jednostka-obliczeniowa">Podstawowa jednostka
+obliczeniowa</h2>
+<p>System nerwowy złożony jest z sieci neuronów, które komunikują się
+miedzy sobą jednokierunkowo. Sygnał generowany przez jądro komórki jest
+wysyłany przez akson jednej komórki i podrożując przez synapse jest
+odbierany przez dendryty komórek następnych. Do przekazania impulsu
+dalej w sieć neuronów, zauważono że do ciała komórki musi zostać
+dostarczona sumarycznie ilość impulsów przekraczająca określoną wartość.
+Model matematyczny w literaturze został pokazany w 1943<span
+class="citation"
+data-cites="McCulloch1943">(<strong>McCulloch1943?</strong>)</span>.
+Koncepcja ta została rozwinięta o element uczenia przez Rosenblatta w
+1958 roku. Architektura zakładała modyfikowalne wagi synaptyczne, co
+pozwala sztucznemu neuronowi na adaptacje. Neuron stał się podstawową
+jednostką obliczeniową, która przekształca wszystkie dochodządze do
+niego sygnały w jeden wyjściowy.</p>
+<p>Dla współczesnego neuronu posiadającego <span
+class="math inline">\(n\)</span> wejść, sygnał wyjściowy <span
+class="math inline">\(y\)</span> opisany jest równaniem: <span
+class="math display">\[\begin{equation}
+    y = f\left(\sum_{i=1}^{n} w_i x_i + b\right)
+\end{equation}\]</span></p>
+<ol>
+<li><p><span class="math inline">\(w_1\)</span> to waga lącząca neuron
+poprzedniej warstwy.</p></li>
+<li><p><span class="math inline">\(x_1\)</span> wartość neuronu warstwy
+poprzedniej.</p></li>
+<li><p><span class="math inline">\(b\)</span> obciążenie.</p></li>
+<li><p><span class="math inline">\(f\)</span> funkcja
+aktywacji.</p></li>
+</ol>
+<h1 id="model-perceptronu">Model Perceptronu</h1>
+<p>Elementem wyróżniającym architekturę perceptronową jest zastosowana w
+nim dyskretna funkcja aktywacji <span
+class="math inline">\(\text{sgn}\)</span>. <span
+class="math display">\[\begin{equation}
+    \text{sgn}(x) = \begin{cases} 1 &amp; \text{dla } x &gt; 0 \\ 0
+&amp; \text{dla } x = 0 \\ -1 &amp; \text{dla } x &lt; 0 \end{cases}
+\end{equation}\]</span></p>
+<h2 id="single-neuron-perceptron">Single neuron perceptron</h2>
+<figure id="fig:two_input_neuron" data-latex-placement="H">
+
+<figcaption>Model sztucznego neuronu z dwoma wejściami i skokową funkcją
+aktywacji.</figcaption>
+</figure>
+<p>Na powyższym schemacie widać w praktyce wzór (1). W najprostszej
+postaci perceptronu, mamy doczynienia z jedym perceptronem, do którego
+dochodzą wejscia, poprzez wagi. W celu ułatwienia dalszego rozumienia
+tekstu przyjęta przezemnie nomenklatura wag wygląda następująco:</p>
+<div class="center">
+<p><span><span class="math inline">\(w_{ds}^l\)</span></span></p>
+</div>
+<ul>
+<li><p><span class="math inline">\(l\)</span> warstwa neuronu, z którego
+wychodzą wagi.</p></li>
+<li><p><span class="math inline">\(d\)</span> neuron do którego trafia
+waga.</p></li>
+<li><p><span class="math inline">\(s\)</span> neuron, którego waga
+wychodzi.</p></li>
+</ul>
+<figure id="fig:network_weights" data-latex-placement="H">
+
+<figcaption>Schemat połączeń pomiędzy dwiema warstwami sieci z
+wyróżnionymi wagami (<span class="math inline">\(w_{11}^1\)</span>) oraz
+(<span class="math inline">\(w_{21}^1\)</span>).</figcaption>
+</figure>
+<h2 id="bramka-logiczna-and-z-wykorzystaniem-perceptronu">Bramka
+logiczna AND z wykorzystaniem perceptronu</h2>
+<p>Problem, który architektura perceptronu rozwiązuje, można przedstawić
+wizualnie w układzie współrzędnych. Celem takiego logicznego układu jest
+binarna klasyfikacja z pomocą funkcji aktywacji sgn. Obliczenia w przód
+mają na celu wyznaczenie prostej, zwaną granicą w układzie
+współrzędnych. Wydzielone zostają dwie klasy, powyżej tej granicy,
+perceptron jest aktywowany, na wyjscie zadaje jedynkę, poniżej zadaje
+minus jeden.</p>
+<h3 id="zapisanie-problemu">zapisanie problemu</h3>
+<p>Regułę działania perceptronu, łatwo zrozumieć na perceptronie
+stworzonym na kształt Bramki logicznej AND. Schemat na rysunku 1.
+odwzorowywuje tą właśnie architekturę. 2 wejścia i jedno wyjście.
+Oczekiwane wyniki w zależności od wartosci wejsciowych: <span
+class="math display">\[\begin{equation}
+    \left\{ \mathbf{p}_1 = \begin{bmatrix} 0 \\ 0 \end{bmatrix}, t_1 =
+-1 \right\} \quad
+    \left\{ \mathbf{p}_2 = \begin{bmatrix} 0 \\ 1 \end{bmatrix}, t_2 =
+-1 \right\} \quad
+    \left\{ \mathbf{p}_3 = \begin{bmatrix} 1 \\ 0 \end{bmatrix}, t_3 =
+-1 \right\} \quad
+    \left\{ \mathbf{p}_4 = \begin{bmatrix} 1 \\ 1 \end{bmatrix}, t_4 = 1
+\right\} .
+\end{equation}\]</span> zgodnie z rysunkiem 1. wartość wyjściowa
+perceptronu:</p>
+<div class="center">
+<p><span class="math inline">\(a = \mathit{sgn}(w_{11}^1*p_1 +
+w_{12}^1*p_2 +b)\)</span></p>
+</div>
+<p>Celem jest odnalezienie takich wag i biasu, aby wyznaczona prosta
+graniczna poprawnie odzielała wartości aktywacji neuronu 1 i -1.</p>
+<h3 id="rozwiązanie-w-matlabie">rozwiązanie w matlabie</h3>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu MATLAB weryfikujący poprawność wag perceptronu."
+data-label="lst:matlab_and"><code>P = [0, 0, 1, 1;
+     0, 1, 0, 1];
+
+W = [2, 2];
+b = -3;
+
+net_input = W * P + b;
+a = sign(net_input); </code></pre>
+<p>Wynikiem działania powyższego skrytpu jest wektor przewidywań
+wartości <span class="math inline">\(\bm{a} = [-1, -1, -1,
+1]\)</span></p>
+<figure id="fig:matlab_plot" data-latex-placement="H">
+<img src="ANDPERCEPTRON.png" style="width:85.0%" />
+<figcaption>Wizualizacja granicy decyzyjnej i przestrzeni cech dla
+bramki AND wygenerowana w środowisku MATLAB.</figcaption>
+</figure>
+<h2 id="reguła-uczenia-perceptronu">Reguła uczenia Perceptronu</h2>
+<p>Omawiana we wstępnie adaptacyjność wynika z możliwości odpowiedniego
+dobierania i modyfikowania wag perceptronu. W przykładzie bramki AND,
+proces nauki i modyfikacji tych zmian został celowo pominięty, a
+zastosowane w nim wagi były poprzednio dobrane. Reguła uczenia
+perceptronu, polega na aktualizacji wag w zależności od błędu,
+osiągnietęgo po kroku w przód. <span
+class="math display">\[\begin{equation}
+    e = t-a
+\end{equation}\]</span> Funkcja aktywacji sgn, daje 3 możliwości wyniku:
+<span class="math display">\[\begin{equation}
+    e = -1
+\end{equation}\]</span> <span class="math display">\[\begin{equation}
+    e = 1
+\end{equation}\]</span> <span class="math display">\[\begin{equation}
+    e = 0
+\end{equation}\]</span> Dzięki czemu, możemy uogólnić zapis wzoru na
+nowe wagi w zależności od wynikowego błędu: <span
+class="math display">\[\begin{equation}
+    W_{new} = W_{old} + e p^T
+\end{equation}\]</span></p>
+<p>W celu pokazania kroku aktualizacji wag, parametry początkowe zostaną
+zainicjowane zerami. <span class="math display">\[\begin{equation}
+    \bm{W}^{(0)} = \begin{bmatrix} 0 &amp; 0 \end{bmatrix}, \quad
+b^{(0)} = 0
+\end{equation}\]</span></p>
+<p><strong>Krok 1: Aktualizacja dla wzorca uczącego</strong><br />
+Wyobraźmy sobie sytuację, w której na wejście sieci trafia punkt <span
+class="math inline">\(\bm{p}_1 = [1, 1]^T\)</span>. Dla bramki logicznej
+AND pożądaną odpowiedzią jest stan wysoki <span
+class="math inline">\(t_1 = 1\)</span>. Sieć oblicza wartość pobudzenia
+(krok w przód): <span class="math display">\[\begin{equation}
+    net = \bm{W}^{(0)}\bm{p}_1 + b^{(0)} = \begin{bmatrix} 0 &amp; 0
+\end{bmatrix} \begin{bmatrix} 1 \\ 1 \end{bmatrix} + 0 = 0
+\end{equation}\]</span> Ponieważ pobudzenie nie przekroczyło zera (<span
+class="math inline">\(net \le 0\)</span>), funkcja aktywacji generuje na
+wyjściu sygnał <span class="math inline">\(a = 0\)</span>. Skutkuje to
+powstaniem dodatniego błędu predykcji: <span
+class="math display">\[\begin{equation}
+    e = t_1 - a = 1 - 0 = 1
+\end{equation}\]</span> Algorytm dokonuje modyfikacji parametrów (reguła
+delta), korygując macierz wag oraz obciążenie: <span
+class="math display">\[\begin{equation}
+    \bm{W}^{(1)} = \bm{W}^{(0)} + e\bm{p}_1^T = \begin{bmatrix} 0 &amp;
+0 \end{bmatrix} + (1)\begin{bmatrix} 1 &amp; 1 \end{bmatrix} =
+\begin{bmatrix} 1 &amp; 1 \end{bmatrix}
+\end{equation}\]</span> <span class="math display">\[\begin{equation}
+    b^{(1)} = b^{(0)} + e = 0 + 1 = 1
+\end{equation}\]</span></p>
+<p>Powyższa procedura jest iterowana przez cały zbiór danych tak długo,
+aż sieć przestanie popełniać błędy. Zmiany w wektorze wag dążą do
+takiego ułożenia granicy decyzyjnej, która odseparuje punkt <span
+class="math inline">\([1,1]\)</span> od pozostałych kombinacji.</p>
+<h1 id="multi-layer-perceptron-mlp-i-nieliniowość">Multi-Layer
+Perceptron (MLP) i Nieliniowość</h1>
+<p>Zaprezentowany w poprzednim rozdziale problem bramki logicznej AND
+jest problemem liniowo separowalnym, który prosta jedno lub wielo
+neuronowa sieć perceptronowa jest w stanie sobie poradzić. Problem
+narodził się, kiedy spróbowano zastosować perceptron do rozwiązania
+bramki logicznej XOR, którego nieliniowość uniemożliwiła rozwiązanie
+siecią perceptronową. Problem ten rozwiązano poprzez dodanie warstw
+ukrytych. Dodanie warstw ukrytych wymusiło zmianę funkcji aktywacji na
+nie liniową. W przeciwnym wypadku, dodanie warstwy ukrytej sprowadziło
+by się do bardziej skomplikowanej kombinacji liniowej, co nie rozwiązało
+by problemu. Dodanie nieliniowości i dodatkowych warstw, zdecydowanie
+utrudniło aktualizacje parametrów sieci. Reguły wstecznej propagacji
+błędu i aktualizacji wag zostały zdefiniowane 30 lat poźniej <span
+class="citation"
+data-cites="rumelhart1986learning">(<strong>rumelhart1986learning?</strong>)</span>.</p>
+<h2 id="funkcja-aktywacji">Funkcja Aktywacji</h2>
+<p>W klasycznym Perceptronie wielowarstwowym używaną funckją aktywacji
+jest sigmoid. Funkcja ta przekształca wartości, tak aby znajdowały się w
+przedziale <span class="math inline">\((0,1)\)</span>. <span
+class="math display">\[\begin{equation}
+    \sigma(x) = \frac{1}{1+e^{-x}}
+\end{equation}\]</span> Prosta pochodna funkcji sigmoid, ułatwia
+skomplikowane obliczenia wstecznej propagacji błedu, stąd jest częstym
+wyborem w architekturach sieci neuronowych. Pochodna prezentuje się
+następująco <span class="math display">\[\begin{equation}
+    \frac{d\sigma}{d x} = \sigma(x) * (1-\sigma(x))
+\end{equation}\]</span></p>
+<h2 id="funkcja-straty-kosztu">Funkcja Straty (Kosztu)</h2>
+<p>Aby możliwa była ocena wyników perceptronu wielowarstwowego,
+zdefiniowano funkcje straty. Jest to matematyczna miara błędu, często
+nazywana również funkcją kosztu. Występuje w wielu formach, ale zawsze
+jej zadaniem jest określenie jak bardzo przewidywania sieci <span
+class="math inline">\(\hat{y}\)</span> różnią się od wartości
+oczekiwanych <span class="math inline">\(y\)</span>. W pierwszym
+perceptronie wielowarstwowym stosowaną miarą był bład średniokwadratowy
+(MSE). Dla wektora warstwy wyjściowej perceptronu funkcje straty E
+definiuje się następująco: <span class="math display">\[\begin{equation}
+    E = \frac{1}{2} \sum_{i=1}^{k} (y_i-\hat{y_i})^2
+\end{equation}\]</span> gdzie <span class="math inline">\(k\)</span> to
+liczba neuronów w warstwie wyjściowej. Kwadrat różnicy gwarantuje, że
+błąd będzie dodatni i proporcjonalnie większy w przypadku dużej
+różnicy.</p>
+<h1 id="przepływ-sygnału-propagacja-w-przód-i-wsteczna">Przepływ
+Sygnału: Propagacja W Przód i Wsteczna</h1>
+<p>Proces uczenia perceptronu wielowarstwowego jest procedurą
+iteracyjną, w której każda z iteracji jest podzielona na 2 fazy. Fazę
+propagacji sygnału w przód i fazę wstecznej propagacji błędu.</p>
+<h2 id="propagacja-w-przód-forward-pass">Propagacja w przód (Forward
+Pass)</h2>
+<p>Faza propagacji w przód to proces podczas którego perceptron dokonuje
+predykcji na podstawie swoich parametrów. Transformacja sygnału
+wejściowego opiera się na serii obliczeń powtórzonej <span
+class="math inline">\(l-1\)</span> razy gdzie <span
+class="math inline">\(l\)</span> to liczba warst perceptronu. Pierwszą
+częścią obliczeń dla dowolnej warstwy <span
+class="math inline">\(l\)</span>: <span
+class="math display">\[\begin{equation}
+    \bm{z}^{(l)} = \bm{W}^{(l)}\bm{a}^{(l-1)} + \bm{b}^{(l)}
+\end{equation}\]</span> gdzie <span
+class="math inline">\(\bm{W}^{(l)}\)</span> to macierz wag połączeń
+wchodzących do warstwy <span class="math inline">\(l\)</span>, a <span
+class="math inline">\(\bm{b}^{(l)}\)</span> to wektor (biasów). <span
+class="math inline">\(\bm{a}^{(0)}\)</span> to sygnał doprowadzony do
+neuronu.</p>
+<p>Następnie, aby wprowadzić do modelu nieliniowość, wektor sum ważonych
+przepuszczany jest przez funkcję aktywacji (np. opisaną wcześniej
+funkcję sigmoidalną). <span class="math display">\[\begin{equation}
+    \bm{a}^{(l)} = \sigma(\bm{z}^{(l)})
+\end{equation}\]</span> Wektor wyjściowy ostatniej warstwy sieci stanowi
+ostateczną predykcję modelu, oznaczaną jako <span
+class="math inline">\(\bm{\hat{y}}\)</span>.</p>
+<h2 id="wsteczna-propagacja-błędu-backpropagation">Wsteczna Propagacja
+Błędu (Backpropagation)</h2>
+<p>W wyniku zakończenia propagacji w przód otrzymujemy, predykcję <span
+class="math inline">\(\hat{y}\)</span>, na podstawie której funkcja
+straty np. wspomniana wcześniej MSE wylicza bład całkowity E. Zadaniem
+algorytmu propagacji wstecznej, jest odpowiedź na pytanie: <em>jak
+zmiana pojedyńczych warstw wpływa na końcowy błąd sieci.</em> Formalnie
+celem algorytmu jest znalezienie gradientu funkcji E <span
+class="math inline">\(\nabla E\)</span>, czyli wektora kierunku w
+maksymalnego wzrostu funkcj. Jako, że funkcja straty <span
+class="math inline">\(E\)</span> jest funkcja wielu zmiennych rozpisując
+kroku graidientu wykorzystujemy pochodną cząstkową <span
+class="math inline">\(\frac{\partial L}{\partial w_{ij}}\)</span>.
+Ponieważ błąd obliczany jest na końcu sieci, a elementy za niego
+odpowiedzialne, znajdują się w jej wnętrzu, do wyznaczania posczególnych
+elementów wektora gradientu, wykorzystuję się regułę łańcuchową. Wpływ
+na błąd wagi łączącej neuron <span class="math inline">\(j\)</span> z
+neuronem <span class="math inline">\(i\)</span> w warstwie <span
+class="math inline">\(l\)</span> można zapisać w następujący sposób:
+<span class="math display">\[\begin{equation}
+    \frac{\partial E}{\partial w_{ij}^{(l)}} = \frac{\partial
+E}{\partial a_i^{(l)}} \cdot \frac{\partial a_i^{(l)}}{\partial
+z_i^{(l)}} \cdot \frac{\partial z_i^{(l)}}{\partial w_{ij}^{(l)}}
+\end{equation}\]</span></p>
+<p>Każdy z tych czynników odnosi się do konkretnego równania
+zdefiniowanego we wcześniejszych krokach:</p>
+<ul>
+<li><p><span class="math inline">\(\frac{\partial E}{\partial
+a_i^{(l)}}\)</span> – określa, jak przewidywania sieci wpływają na
+funkcje straty</p></li>
+<li><p><span class="math inline">\(\frac{\partial a_i^{(l)}}{\partial
+z_i^{(l)}}\)</span> – to pochodna funkcji aktywacji <span
+class="math inline">\(\sigma&#39;(z)\)</span>(10).</p></li>
+<li><p><span class="math inline">\(\frac{\partial z_i^{(l)}}{\partial
+w_{ij}^{(l)}}\)</span> – to pochodna sumy neuronu.</p></li>
+</ul>
+<p>Jeśli oznaczymy dwa pierwsze elementy powyższego równania za pomocą
+(<span class="math inline">\(\delta_i^{(l)}\)</span>) to ostateczny wzór
+na pochodną cząstkową względem konkretnej wagi przyjmuje taką postać.
+<span class="math display">\[\begin{equation}
+    \frac{\partial E}{\partial w_{ij}^{(l)}} = \delta_i^{(l)} \cdot
+a_j^{(l-1)}
+\end{equation}\]</span> (<span
+class="math inline">\(\delta_i^{(l)}\)</span>) to błąd lokalny sygnału
+warstwy <span class="math inline">\(l\)</span> <span class="citation"
+data-cites="Zurada1992">(<strong>Zurada1992?</strong>)</span></p>
+<p>Mając tak obliczone błędy względem wag sieci, za pomocą odpowiedniego
+algorytmu optymalizacyjnego dokonywana jest aktualizacja wag, co
+przesuwa całą sieć w stronę minimum funkcji straty.</p>
+<h1 id="przykład">Przykład</h1>
+<p>Aby zilustrować mechanikę przepływu sygnału zdefiniowaną w
+poprzednich rozdziałach, przeanalizujmy konkretny przykład perceptronu
+wielowarstwowego. Przyjmijmy architekturę składającą się z warstwy
+wejściowej przyjmującej 9 cech, pojedynczej warstwy ukrytej z 4
+neuronami oraz warstwy wyjściowej dokonującej klasyfikacji do 3
+oddzielnych klas.</p>
+<figure id="fig:mlp_arch" data-latex-placement="H">
+
+<figcaption>Architektura w pełni połączonej sieci MLP w topologii
+9-4-3.</figcaption>
+</figure>
+<p>Sygnał wejsciowy to wektor 9-elementowy <span
+class="math inline">\(X\)</span> <span
+class="math display">\[\begin{equation}
+\bm{X}= [x_1, x_2, \dots, x_9]^T
+\end{equation}\]</span> Wektor wartości oczekiwanych <span
+class="math display">\[\begin{equation}
+    \bm{Y}=\begin{bmatrix}
+        0&amp;0&amp;1
+    \end{bmatrix}^T
+\end{equation}\]</span> Macierz wag pierwszej warstwy ma wymiary <span
+class="math inline">\(4\times9\)</span> <span
+class="math display">\[\begin{equation}
+    \bm{W^{(1)}} = \begin{bmatrix}
+        w_{11}^1 &amp; w_{12}^1 &amp; \dots &amp; w_{19}^1 \\
+        w_{21}^1 &amp; \dots &amp; \dots &amp; \dots\\
+        \dots &amp; \dots &amp; \dots &amp;  \dots \\
+        w_{41}^1 &amp; \dots &amp; \dots&amp;w_{49}^1
+    \end{bmatrix}
+\end{equation}\]</span></p>
+<p>Macierz wag drugiej warstwy ma wymiary <span
+class="math inline">\(3\times4\)</span> <span
+class="math display">\[\begin{equation}
+    \bm{W^{(2)}} = \begin{bmatrix}
+        w_{11}^2 &amp; w_{12}^2 &amp; \dots &amp; w_{14}^2 \\
+        w_{21}^2 &amp; \dots &amp; \dots &amp; \dots\\
+        w_{31}^2 &amp; \dots &amp; \dots&amp;w_{34}^2
+    \end{bmatrix}
+\end{equation}\]</span> Wektor predykcji <span
+class="math inline">\(\bm{\hat{Y}}\)</span> jest 3-elementowy <span
+class="math display">\[\begin{equation}
+\bm{X}= [\hat{y_1}, \hat{y_2}, \hat{y_3}]^T
+\end{equation}\]</span></p>
+<h2 id="przyklad-na-liczbach">przyklad na liczbach</h2>
+<p>Wartości wag muszą zostać losowo zainicjowane, jednowartosciowa
+macierz wag, może doprowadzić do nie optymalnego procesu uczenia się
+sieci. Macierze <span class="math inline">\(\bm{W^1}\)</span> i <span
+class="math inline">\(\bm{W^2}\)</span> zostały zainijowane w
+następujący sposób: <span class="math display">\[\begin{equation}
+    \bm{W}^{1} = \begin{bmatrix}
+        0.1 &amp; 0.3 &amp; -0.3 &amp; -0.1 &amp; 0.1 &amp; 0.8 &amp;
+0.8 &amp; 0.8 &amp; 0.1 \\
+        0.2 &amp; 0.1 &amp; -0.4 &amp; 0.1 &amp; 0.1 &amp; 0.1 &amp; 0.7
+&amp; 0.1 &amp; -0.1 \\
+        -0.3 &amp; 0.7 &amp; 0.8 &amp; 0.8 &amp; -0.8 &amp; -0.9 &amp;
+0.1 &amp; 0.1 &amp; -0.0 \\
+        -0.4 &amp; 0.1 &amp; 0.7 &amp; 0.9 &amp; 0.1 &amp; 0.1 &amp; 0.9
+&amp; 0.9 &amp; 0.1
+    \end{bmatrix}
+\end{equation}\]</span></p>
+<p><span class="math display">\[\begin{equation}
+    \bm{W}^{2} = \begin{bmatrix}
+        0.3 &amp; 0.7 &amp; 0.1 &amp; -0.1 \\
+        0.1 &amp; 0.4 &amp; 0.8 &amp; -0.4 \\
+        -0.2 &amp; -0.9 &amp; 0.9 &amp; 0.6
+    \end{bmatrix}
+\end{equation}\]</span></p>
+<p>Wektor sygnału wejściowego <span
+class="math inline">\(\bm{X}\)</span> <span
+class="math display">\[\begin{equation}
+    \bm{X} = \begin{bmatrix}
+        1 &amp; 1 &amp; 1 &amp;0 &amp;1 &amp;1 &amp;1 &amp;1
+&amp;1         
+    \end{bmatrix}
+\end{equation}\]</span></p>
+<p>Pierwszą transformacje sygnału można opisać równaniem: <span
+class="math display">\[\begin{equation}
+    z^1 = \bm{W}^1 \cdot \bm{X} =\begin{bmatrix}
+        2,7\\
+        0,8\\
+        -0,3\\
+        2,5
+        
+    \end{bmatrix}
+\end{equation}\]</span> Wektor wynikowy, to surowe wartości sumy
+neuronów, następnym krokiem jest przepuszczenie tych wyników przez
+nieliniową funkcję aktywacji np. sigmoid.</p>
+<p>Należy pamiętać, że funkcje aktywacji stosujemy do każdego elementu
+wektora, co możemy zapisać w ten sposób: <span
+class="math display">\[\begin{equation}
+    \bm{a} = \sigma(\bm{Z}) = \begin{bmatrix}
+        \sigma(z_1) \\
+        \sigma(z_2) \\
+        \vdots \\
+        \sigma(z_n)
+    \end{bmatrix}
+\end{equation}\]</span> Dla wektora <span
+class="math inline">\(Z^1\)</span> wektor aktywacji warstwy ukrytej
+wygląda następująco: <span class="math display">\[\begin{equation}
+    \sigma(\bm{Z^{(1)}}) = \bm{A}^{(1)} = \begin{bmatrix}
+        0,9370 \\
+        0,6900 \\
+        0,4256 \\
+        0,9241
+    \end{bmatrix}
+\end{equation}\]</span></p>
+<p>Aby otrzymać wektor aktywacji warstwy wyjsciowej, kroki 28 i 30
+musimy powtórzyć. <span class="math display">\[\begin{equation}
+    z^{(2)} = \bm{W}^{(2)} \cdot \bm{A} =\begin{bmatrix}
+        0,7142\\
+        0,3405\\
+        0,129
+    \end{bmatrix}
+\end{equation}\]</span> <span class="math display">\[\begin{equation}
+    \sigma(\bm{Z^{(2)}) = \bm{Y}^{(2)} = \begin{bmatrix}
+        0,67 \\
+        0,5843 \\
+        0,5322 \\
+    \end{bmatrix}
+\end{equation}\]</span></p>
+<p>Otrzymany wektor jest wektorem predykcji sieci. Ostatnim krokiem
+propagacji w przód jest obliczenie wektora błędu. W tym celu zostanie
+wykorzystana opisywana wcześniej funkcja błędu średniokwadratowego. Dla
+każdego z błędów jest obliczany z osobna.</p>
+<p><span class="math display">\[\begin{equation}
+    E = \frac{1}{2} (y_1 - \hat{y}_1)^2
+\end{equation}\]</span></p>
+<h3 id="reguła-łańcuchowa">Reguła łańcuchowa</h3>
+<p>W celu większej klarowności propagacji wstecznej, równanie gradientu
+pierwszej wagi w warstwie ukryty został przedstawiony skalarnie: <span
+class="math display">\[\begin{equation}
+    \frac{\partial E}{\partial w_{11}^{(1)}} = \left( \sum_{k=1}^{3}
+\frac{\partial E}{\partial \hat{y}_k} \cdot \frac{\partial
+\hat{y}_k}{\partial z_k^{(2)}} \cdot \frac{\partial z_k^{(2)}}{\partial
+a_1^{(1)}} \right) \cdot \frac{\partial a_1^{(1)}}{\partial z_1^{(1)}}
+\cdot \frac{\partial z_1^{(1)}}{\partial w_{11}^{(1)}}
+\end{equation}\]</span> <span class="math display">\[\begin{equation}
+    \frac{\partial E}{\partial w_{11}^{(1)}} = \left( \sum_{k=1}^{3}
+(\hat{y}_k-y_k) \cdot \hat{y}_k(1 - \hat{y}_k) \cdot w_{k1}^{(2)}
+\right) \cdot a_1^{(1)}(1 - a_1^{(1)}) \cdot x_1
+\end{equation}\]</span> Co po podstawieniu wartości daje wynik: <span
+class="math display">\[\begin{equation}
+    w_{11}^1=-0.0048
+\end{equation}\]</span> W ten sposób można wyliczyć pochodne funkcji
+straty w zależności od każdej z wag. Jednak liczenie tego skalarnie jest
+nieefektywne obliczeniowo, dlatego te operacje wykonywane są na
+macierzach wykorzystując do tego pojęcie błędu lokalnego(<span
+class="math inline">\(\bm{\delta}\)</span>). Błąd lokalny dla warstwy 2
+wygląda następująco. <span class="math display">\[\begin{equation}
+    \bm{\delta}^{(2)} = (\bm{y} - \bm{\hat{y}}) \odot
+\sigma&#39;(\bm{z}^{(2)})
+\end{equation}\]</span></p>
+<p>Prawdziwy sens takiego rozwiązania, można zaobserwować przy
+obliczaniu delty dla warstwy ukrytej. Zamiast ręcznego sumowania błędów,
+wektor <span class="math inline">\(\bm{\delta}^{(1)}\)</span> jest
+wynikiem mnożenia: <span class="math display">\[\begin{equation}
+    \bm{\delta}^{(1)} = \left( (\bm{W}^{(2)})^T \bm{\delta}^{(2)}
+\right) \odot \sigma&#39;(\bm{z}^{(1)})
+\end{equation}\]</span></p>
+<p>Mając wyznaczone wektory błędów lokalnych dla każdej warstwy,
+macierze gradientów wyznacza się mnożąc wektor delty przez transponowany
+wektor sygnału wejściowego do danej warstwy <span
+class="math display">\[\begin{equation}
+    \nabla_{\bm{W}^{(2)}} E = \bm{\delta}^{(2)}\cdot (\bm{A}^{(1)})^T
+\end{equation}\]</span> <span class="math display">\[\begin{equation}
+    \nabla_{\bm{W}^{(1)}} E = \bm{\delta}^{(1)}\cdot \bm{X}^T
+\end{equation}\]</span> Wracając do przykładu wektor <span
+class="math inline">\(\bm{\delta}^{(2)}\)</span> wygląda następująco
+<span class="math display">\[\begin{equation}
+    \bm{\delta}^{(2)} = \begin{bmatrix}
+        -0,148\\
+        -0,142\\
+        0,116
+    \end{bmatrix}
+\end{equation}\]</span> wektor delty ukrytej <span
+class="math inline">\(\bm{\delta}^{(1)}\)</span> <span
+class="math display">\[\begin{equation}
+    (\bm{W}^{(1)})^T \cdot \bm{\delta}^{(2)}
+\odot  \sigma&#39;(\bm{z}^{(1)}) =  \begin{bmatrix}
+        -0,0048\\
+        -0,0567\\
+        0,0058\\
+        0,0099
+    \end{bmatrix}
+\end{equation}\]</span> Finalnie posiadając juz wszystkie delty możemy
+obliczyć gradienty wag gradient dla <span
+class="math inline">\(W^{(1)}\)</span> <span
+class="math display">\[\begin{equation}
+    \nabla{\bm{W}^{(1)}} =\bm{\delta}^{(1)} \cdot\bm{W}^{(1)}
+\end{equation}\]</span> <span class="math display">\[\begin{equation}
+    \begin{bmatrix}
+        -0.0048 &amp; -0.0048 &amp; -0.0048 &amp; 0 &amp; -0.0048 &amp;
+-0.0048 &amp; -0.0048 &amp; -0.0048 &amp; -0.0048 \\
+        -0.0567 &amp; -0.0567 &amp; -0.0567 &amp; 0 &amp; -0.0567 &amp;
+-0.0567 &amp; -0.0567 &amp; -0.0567 &amp; -0.0567 \\
+        -0.0058 &amp; -0.0058 &amp; -0.0058 &amp; 0 &amp; -0.0058 &amp;
+-0.0058 &amp; -0.0058 &amp; -0.0058 &amp; -0.0058 \\
+        0.0099 &amp; 0.0099 &amp; 0.0099 &amp; 0 &amp; 0.0099 &amp;
+0.0099 &amp; 0.0099 &amp; 0.0099 &amp; 0.0099
+    \end{bmatrix}
+\end{equation}\]</span> gradient dla <span
+class="math inline">\(W^{(2)}\)</span> <span
+class="math display">\[\begin{equation}
+    \nabla{\bm{W}^{(2)}} =\bm{\delta}^{(2)} \cdot\bm{X} =
+\begin{bmatrix}
+        -0.1388 &amp; -0.1022 &amp; -0.0630 &amp; -0.1369 \\
+        -0.1330 &amp; -0.0979 &amp; -0.0604 &amp; -0.1312 \\
+        0.1091 &amp; 0.0804 &amp; 0.0496 &amp; 0.1076
+    \end{bmatrix}
+\end{equation}\]</span></p>
+<h2 id="aktualizacja-wag">Aktualizacja wag</h2>
+<p>Z tak wyliczonym gradientem funkcji straty jesteśmy w stanie
+odpowiednio zaktualizować wagi. Należy jednak pamiętać o tym, że
+gradient to kierunek maksymalnego wzrostu funkcji, a rozchodzi się o
+minimalizację funkcji straty. Dlatego gradienty należy odjąć od macierzy
+wag. Do zmiany wag wykorzystuje się algorytm optymalizacyjny, który
+przyjmuje wiele form, a najprostsza z nich i ta, która zostanie
+zastosowana nazywa się SGD (Stochastic gradient descent). Zakłada, że po
+każdej iteracji wagi zostają zaktualizowane. W aktualizacji wag bierze
+udział parametr, nazywany learning rate. Ma on za zadanie zapobiegnięciu
+zbyt szybkich zmian, które mogły by prowadzić do pominięcia minimum, lub
+utknięcia w minimum lokalnym. Używając SGD i tak nie można mieć pewności
+czy trening nie skończy się w minimum lokalnym. Wzór na aktualizacje
+wag: <span class="math display">\[\begin{equation}
+    \bm{W}^{nowe} = \bm{W}^{stare} -\eta\nabla W^{stare}
+\end{equation}\]</span> gdzie <span class="math inline">\(\eta\)</span>
+to wspołczynnik uczenia, w naszym przykładzie dla uprosczenia został
+przyjęty <span class="math inline">\(\eta = 1\)</span>. Zgodnie z
+teorią, macierze wag po aktualizacji wyglądają następująco: <span
+class="math display">\[\begin{equation}
+    \bm{W}^{(1)} = \begin{bmatrix}
+        0.1048 &amp; 0.3048 &amp; -0.2952 &amp; -0.1000 &amp; 0.1048
+&amp; 0.8048 &amp; 0.8048 &amp; 0.8048 &amp; 0.1048 \\
+        0.2567 &amp; 0.1567 &amp; -0.3433 &amp; 0.1000 &amp; 0.1567
+&amp; 0.1567 &amp; 0.7567 &amp; 0.1567 &amp; -0.0433 \\
+        -0.2942 &amp; 0.7058 &amp; 0.8058 &amp; 0.8000 &amp; -0.7942
+&amp; -0.8942 &amp; 0.1058 &amp; 0.1058 &amp; 0.0058 \\
+        -0.4099 &amp; 0.0901 &amp; 0.6901 &amp; 0.9000 &amp; 0.0901
+&amp; 0.0901 &amp; 0.8901 &amp; 0.8901 &amp; 0.0901
+    \end{bmatrix}
+\end{equation}\]</span></p>
+<p><span class="math display">\[\begin{equation}
+    \bm{W}^{(2)} = \begin{bmatrix}
+        0.4388 &amp; 0.8022 &amp; 0.1630 &amp; 0.0369 \\
+        0.2330 &amp; 0.4979 &amp; 0.8604 &amp; -0.2688 \\
+        -0.3091 &amp; -0.9804 &amp; 0.8504 &amp; 0.4924
+    \end{bmatrix}
+\end{equation}\]</span></p>
+<h2 id="wyniki">Wyniki</h2>
+<p>Pojedyńcze prezjśie sygnału w przód i tył nie jest wystarczające do
+rozwiązania nieliniowego problemu klasyfikacji, dlatego w celu
+osiągnięcia pożądanych wyników pokazana procedura jest powtarzana
+iteracyjnie. Powyższe obliczenia umieszcza się w pętli, nazywanej pętlą
+treningową. Warto wprowadzić pojęcie epoki, która definiowana jest jako
+pełne przejście algorytmu uczącego przez zbiór danych treningowych.
+Wykres wartośći funkcji straty od epoki prezentuje się następująco:</p>
+<figure id="fig:matlab_plot" data-latex-placement="H">
+<img src="krzywa_uczenia.png" style="width:85.0%" />
+<figcaption>Wizualizacja zależności błędu od epoki wygenerowana w
+środowisku MATLAB.</figcaption>
+</figure>
+<p>Z wykresu widać ze dopiero po 100 epokach przewidywania sieci, nie
+odbiegają diametralnie od warstości oczekiwanych. Stan macierzy <span
+class="math inline">\(\bm{W}^{(1)}\)</span> i <span
+class="math inline">\(\bm{W}^{(2)}\)</span> po 200 epokach: <span
+class="math display">\[\begin{equation}
+    \bm{W}^{(1)} = \begin{bmatrix}
+        -0.4525 &amp; 0.3004 &amp; -0.8525 &amp; -0.1000 &amp; -0.4525
+&amp; 3.0396 &amp; 0.2475 &amp; 0.2475 &amp; -0.4525 \\
+        -0.2722 &amp; 4.0988 &amp; -0.8722 &amp; 0.1000 &amp; -0.3722
+&amp; 1.4123 &amp; 0.2278 &amp; -0.3722 &amp; -0.5722 \\
+        -0.1349 &amp; 1.1933 &amp; 0.9651 &amp; 0.8000 &amp; -0.6349
+&amp; -4.4999 &amp; 0.2651 &amp; 0.2651 &amp; 0.1651 \\
+        -0.4185 &amp; -3.5950 &amp; 0.6815 &amp; 0.9000 &amp; 0.0815
+&amp; 1.3495 &amp; 0.8815 &amp; 0.8815 &amp; 0.0815
+    \end{bmatrix}
+\end{equation}\]</span></p>
+<p><span class="math display">\[\begin{equation}
+    \bm{W}^{(2)} = \begin{bmatrix}
+        2.1091 &amp; 1.5979 &amp; -4.4859 &amp; -1.0830 \\
+        -2.3557 &amp; 1.4241 &amp; 2.6968 &amp; -4.5643 \\
+        -1.5030 &amp; -4.3578 &amp; 1.2332 &amp; 2.4495
+    \end{bmatrix}
+\end{equation}\]</span></p>
+<h3 id="wyniki-klasyfikacji">Wyniki klasyfikacji</h3>
+<p>Przewidywania sieci po wytrenowaniu, powstałe w tak zwanej fazie
+odtwarzania, nie wyliczamy błędów i pomijamy propagacje wsteczną.</p>
+<div id="tab:wyniki_klasyfikacji">
+<table>
+<caption>Wyniki klasyfikacji po 200 epokach</caption>
+<thead>
+<tr>
+<th style="text-align: center;"><strong>Rozpoznawana Klasa</strong></th>
+<th style="text-align: center;"><strong>Wektor Oczekiwany (<span
+class="math inline">\(\bm{y}\)</span>)</strong></th>
+<th style="text-align: center;"><strong>Predykcja Sieci (<span
+class="math inline">\(\bm{\hat{y}}\)</span>)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">Klasa 1</td>
+<td style="text-align: center;"><span class="math inline">\([1, 0,
+0]^T\)</span></td>
+<td style="text-align: center;"><span class="math inline">\([0.9175,\
+0.0696,\ 0.0153]^T\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;">Klasa 2</td>
+<td style="text-align: center;"><span class="math inline">\([0, 1,
+0]^T\)</span></td>
+<td style="text-align: center;"><span class="math inline">\([0.0827,\
+0.9066,\ 0.0767]^T\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;">Klasa 3</td>
+<td style="text-align: center;"><span class="math inline">\([0, 0,
+1]^T\)</span></td>
+<td style="text-align: center;"><span class="math inline">\([0.0246,\
+0.0821,\ 0.9188]^T\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>W celu sprawdzenia wykresu zależności liczby epok od błędu Tabelę 1
+powtórzono dla klasyfikacji po 20 epokach treningowych.</p>
+<div id="tab:wyniki_klasyfikacji_niestabilne">
+<table>
+<caption>Wyniki klasyfikacji po 20 epokach</caption>
+<thead>
+<tr>
+<th style="text-align: center;"><strong>Rozpoznawana Klasa</strong></th>
+<th style="text-align: center;"><strong>Wektor Oczekiwany (<span
+class="math inline">\(\bm{t}\)</span>)</strong></th>
+<th style="text-align: center;"><strong>Predykcja Sieci (<span
+class="math inline">\(\bm{\hat{y}}\)</span>)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">Klasa 1</td>
+<td style="text-align: center;"><span class="math inline">\([1, 0,
+0]^T\)</span></td>
+<td style="text-align: center;"><span class="math inline">\([0.3586,\
+0.3092,\ 0.2733]^T\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;">Klasa 2</td>
+<td style="text-align: center;"><span class="math inline">\([0, 1,
+0]^T\)</span></td>
+<td style="text-align: center;"><span class="math inline">\([0.2877,\
+0.4020,\ 0.4141]^T\)</span></td>
+</tr>
+<tr>
+<td style="text-align: center;">Klasa 3</td>
+<td style="text-align: center;"><span class="math inline">\([0, 0,
+1]^T\)</span></td>
+<td style="text-align: center;"><span class="math inline">\([0.2813,\
+0.3682,\ 0.4864]^T\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Zestawienie ze sobą powyższych tabel, pokazuje sensownośc wykresu 2.
+Predykcje sieci nie są wystarczające, aby można było mówić o poprawnej
+klasyfikacji.</p>
+<h1 id="implementacja-programowa">Implementacja programowa</h1>
+<p>Powyższy przykład działania perceptronu wielowarstwowego, jest
+przykładem elementarnym. 9-elementowa warstwa wejsciowa, nie występuje
+po za przykładami akademickimi. Pomimo tego jedno przejście sygnału w
+przód i w tył jak pokazano jest dość wymagające obliczeniowo. W jednej
+iteracji wykonywanych jest około 300 podstawowych operaci
+matematycznych. Co sprawia, że liczenie tego na kartce nawet dla tak
+prostych przykładów jak zaprezentowana topologia sieci 9-4-3, staje się
+poprostu niemożliwe. To powiedziawszy w celu rozwiązania tych obliczeń
+wybrano środowisko matlab. Główna pętla obliczeniowa, odpowiadająca za
+przepływ sygnału w przód i tył:</p>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu MATLAB przedstawiający pętlę uczącą."
+data-label="lst:matlab_and"><code>for epoka = 1:epoki
+    blad_epoki = 0;
+
+    for i = 1:size(X, 2)
+        x_in = X(:, i);
+        y = Y(:, i);
+
+
+        z_1 = W_1 * x_in;
+        a_1 = 1./(1+exp(-z_1));
+        z_2 = W_2 * a_1;
+        a_2 = 1./(1+exp(-z_2));
+
+
+        delta_wyjscie = (a_2 - d) .* a_2 .* (1 - a_2);
+        delta_ukryta = W_2&#39; * delta_wyjscie .* a_1 .* (1 - a_1);
+
+        Gradient_W_1 = delta_ukryta * x_in&#39;;
+        Gradient_W_2 = delta_wyjscie * a_1&#39;;
+
+
+        W_1 = W_1 - lr * Gradient_W_1;
+        W_2 = W_2 - lr * Gradient_W_2;
+    end
+end</code></pre>
+<h1 id="weryfikacja-działania-na-zbiorze-danych-mnist">Weryfikacja
+działania na zbiorze danych MNIST</h1>
+<p>Analizowany powyżej przykład jak wsponimałem jest elementarny. W celu
+zweryfikowania przedstawionego rozumienia, perceptron wielowarstwowy
+zostanie wytrenowany do klasyfikacji obrazów cyfr ze zbioru danych
+MNIST.</p>
+<h2 id="wprowadzenie-do-problemu">Wprowadzenie do problemu</h2>
+<p>Zbiór danych MNIST składa się z 60000 tysięcy obrazów odręcznie
+pisanych cyfr o wymiarach <span
+class="math inline">\(28\times28\)</span> wyglądających następująco:</p>
+<figure id="fig:matlab_plot" data-latex-placement="H">
+<img src="mnist_plot.png" style="width:85.0%" />
+<figcaption>Przykładowa próbka danych ze zbioru MNIST</figcaption>
+</figure>
+<p>Celem jest poprawna klasyfikacja cyfry znajdującej się na
+obrazie.</p>
+<h2 id="topologia-sieci">Topologia sieci</h2>
+<p>Wielowarstwowy perceptron operuje na wektorze danych, dlatego każdą z
+macierzy należy odpowiednio przygotować, przekształcając ją na wektor o
+długości <span class="math inline">\(28\times28=784\)</span> warstwa
+wyjsciowa musi byc wektorem o dlugości <span
+class="math inline">\(10\)</span>, ze względu na 10 klas do
+klasyfikacji. Zdecydowano się na jedną warstwe ukrytą z 64 neuronami.
+Pętla treningowa jest identyczna jak pokazano powyżej, różnią jedynie
+się rozmiary macierzy które uczestniczą w mnożeniach. <span
+class="math display">\[\begin{equation}
+    \bm{X} = 784\times1
+\end{equation}\]</span> <span class="math display">\[\begin{equation}
+    \bm{W}^{(1)} = 64\times784
+\end{equation}\]</span> <span class="math display">\[\begin{equation}
+    \bm{W}^{(2)} = 10\times64
+\end{equation}\]</span></p>
+<p>Tak jak dla elementarnego przykładu, tu też możemy zaobserwować
+zależność malejącego błędu wraz z każda epoką.</p>
+<figure id="fig:matlab_plot" data-latex-placement="H">
+<img src="MNIST.png" style="width:85.0%" />
+<figcaption>Wizualizacja zależności błędu od epoki wygenerowana w
+środowisku MATLAB.</figcaption>
+</figure>
+<h3
+id="szczegółowa-analiza-rozkładu-prawdopodobieństw-warstwy-wyjściowej">Szczegółowa
+analiza rozkładu prawdopodobieństw warstwy wyjściowej</h3>
+<p>W celu zobrazowania mechanizmu decyzyjnego, poddano analizie surowe
+wektory wyjściowe <span class="math inline">\(\bm{\hat{y}}\)</span> dla
+pięciu losowo wybranych próbek testowych.</p>
+<ul>
+<li><p><strong>Przykład 1 (Oczekiwana cyfra: 4):</strong> <span
+class="math display">\[\begin{equation*}
+        \bm{\hat{y}}_1 = [0.0011,\ 0,\ 0,\ 0.0006,\ \mathbf{0.9952},\
+0.0281,\ 0.0129,\ 0.0002,\ 0.0046,\ 0.0022]^T
+\end{equation*}\]</span></p></li>
+<li><p><strong>Przykład 2 (Oczekiwana cyfra: 6):</strong> <span
+class="math display">\[\begin{equation*}
+        \bm{\hat{y}}_2 = [0.0341,\ 0,\ 0.0012,\ 0,\ 0.0031,\ 0.0012,\
+\mathbf{0.9952},\ 0,\ 0.0001,\ 0.0009]^T
+\end{equation*}\]</span></p></li>
+<li><p><strong>Przykład 3 (Oczekiwana cyfra: 2):</strong> <span
+class="math display">\[\begin{equation*}
+        \bm{\hat{y}}_3 = [0.0001,\ 0.0001,\ \mathbf{0.9991},\ 0.0022,\
+0,\ 0,\ 0.0030,\ 0.0059,\ 0.0007,\ 0]^T
+\end{equation*}\]</span></p></li>
+<li><p><strong>Przykład 4 (Oczekiwana cyfra: 2):</strong> <span
+class="math display">\[\begin{equation*}
+        \bm{\hat{y}}_4 = [0.0002,\ 0,\ \mathbf{0.9956},\ 0.0008,\
+0.0005,\ 0,\ 0.1040,\ 0,\ 0,\ 0.0005]^T
+\end{equation*}\]</span></p></li>
+<li><p><strong>Przykład 5 (Oczekiwana cyfra: 7):</strong> <span
+class="math display">\[\begin{equation*}
+        \bm{\hat{y}}_5 = [0.0013,\ 0,\ 0,\ 0.0025,\ 0.0092,\ 0.0127,\
+0,\ \mathbf{0.9722},\ 0.0002,\ 0.0807]^T
+\end{equation*}\]</span></p></li>
+</ul>
+<h1
+id="granice-analitycznej-propagacji-wstecznej-i-systemy-autograd">Granice
+analitycznej propagacji wstecznej i systemy Autograd</h1>
+<p>Zaimplementowany i przetestowany na bazie MNIST algorytm propagacji
+wstecznej dowiódł swojej poprawności oraz skuteczności. Należy jednak
+zauważyć, że wszystkie równania definiujące gradienty macierzy wag
+(<span class="math inline">\(\nabla_{\bm{W}^{(1)}} E\)</span> oraz <span
+class="math inline">\(\nabla_{\bm{W}^{(2)}} E\)</span>) zostały
+wyprowadzone w sposób analityczny.</p>
+<p>To podejście może mieć swoją wadę przy bardziej skompliowanych
+topologiach sieci, gdzie obliczanie tego ręcznie staje się zadaniem
+żmudnym i czasochłonnym. W celu przetestowania nowej topologii, trzeba
+wyprowadzić wszystko od zera.</p>
+<p>Rozwiązaniem problemu skalowalnosci propagacji wstecznej jest
+automatyczne różniczkowanie. Aktualnie sotosowane w każdej z bibliotek
+do deeplearningu, takich jak np. PyTorch, TensorFlow. Działanie
+autogradu opiera się na przechowywaniu historii obliczeń w pamięci.</p>
+<h2 id="graf-obliczeniowy">Graf obliczeniowy</h2>
+<p>Każda operacja matematyczna nie jest jedynie obliczana, ale również
+przechowywana w pamięci w formie acyklicznego grafu skierowanego. Jest
+odpowiednio tworzony podczas fazy forward, tak aby składniki wyrażeń
+znajdowały się przed wyrażeniami je posiadającymi. Zapisywana jest
+również operacja, która dany węzęł wygenerwowała.</p>
+<ol>
+<li><p><strong>Faza propagacji wstecznej:</strong> Gdy faza propagacji w
+przód dobiega końca, nastętpuje obliczenie wartości funkcji straty.
+System odwraca kolejność przechodzenia grafu, zaczynając od węzła
+wynikowego, idąc do węzłów rodziców. W każdym węźle aplikuje lokalną
+pochodną dzieki zapisowi operacji i przemnaża ją przez spływający z góry
+sygnał błędu.</p></li>
+</ol>
+<p>Dzięki temu, niezależnie jak bardzo skomplikowana będzie topologia
+sieci, zasada łańcuchowa pisze się sama, a co za tym idzie faza
+backpropagation jest zautomatyzowana.</p>
+<h2 id="podejście-do-implementacji">Podejście do implementacji</h2>
+<p>Językiem, który został wybrany do implementacji automatycznego
+gradientu jest Python. Na pythona zdecydowano się dzięki jego
+obiektowości i prostocie pisania. W implementacji wykorzystano jedynie
+numpy do oddelegowania obliczeń do silników napisanych w C.</p>
+<h3 id="podstawowy-blok">Podstawowy blok</h3>
+<p>Aby w efektywny sposób zapisywać wykonywane operacjie, zdecydowano
+się operować na stworzonym type danych <em>Value</em>. Co pozwoliło na
+przechowywanie składników węzła w Pythonowym secie oraz funkcji lokalnej
+pochodnej.</p>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu Python przedstawiający inicjację klasy Tensor."
+data-label="lst:matlab_and"><code>class Tensor:
+    def __init__(self, data, _children = (), _op = &quot;&quot;, _label = &quot;&quot;):
+        self.data = np.array(data, dtype=np.float32)
+        self.grad = np.zeros_like(self.data)
+        self._prev = set(_children)
+        self._backward = lambda : None
+        self.op = _op
+        self.label = _label</code></pre>
+<ul>
+<li><p><strong>data</strong> to macierz wartości jednej z
+warstw.</p></li>
+<li><p><strong>grad</strong> macierz gradientu spływającego z
+góry.</p></li>
+<li><p><strong>prev</strong> to set składników danej operacji.</p></li>
+<li><p><strong>backward</strong> to funkcja lambda pochodnej
+lokalnej.</p></li>
+<li><p><strong>op</strong> to zastosowany operator w formacie
+string</p></li>
+<li><p><strong>label</strong> to opcjonalny opis danego
+tensora.</p></li>
+</ul>
+<h3 id="serce-algorytmu">Serce algorytmu</h3>
+<p>W Pythonie wszystkie operacje matematyczne, wykorzystujące znane nam
+podstawowe operatory <span
+class="math inline">\(+,-,\times,\div,e\)</span> i potęga, można
+stosować jedynie do wartości skalarnych. Oznacza to, że w że w przypadku
+nieprymitywnego rodzaju danych np. Tensor, próba dokonania podstawowej
+operacji skończy się zgłoszeniem błędu przez interpreter. Dzięki
+obiektowości pythona i specjalnych funkcji, możemy nadpisać te
+podstawowe operatory, tak aby interpreter wiedział co ma zrobić podczas
+wystąpienia operacji na typach nieprymitywnych. Istnienie takich
+specjalnych funkcji pozwala na rozszerzenie operacji na potrzeby
+budowania grafu i obsługi propagacji wstecznej.</p>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu Python przedstawiający nadpisanie podstawowej operacji dla klasy Tensor."
+data-label="lst:matlab_and"><code>def __add__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        
+        out = Tensor(self.data + other.data, (self, other), &#39;+&#39;)
+
+        def _backward():
+            self.grad += out.grad
+            other.grad += out.grad
+        
+        out._backward = _backward
+        return out</code></pre>
+<ul>
+<li><p><strong>out</strong> to Tensor wynikowy działania</p></li>
+<li><p><strong>other</strong> uperwnienie się czy dodawana wartość też
+jest typu Tensor, w przeciwnym wypadku Interpreter zwrócił by bład
+ponieważ nie wie jak dodawać Tensor do prymitywnego typu
+danych.</p></li>
+<li><p><strong>backward</strong> to odpowiednia funkcja pochodnej
+lokalnej.</p></li>
+</ul>
+<h3 id="rowinięcie-funkcji-backward">rowinięcie funkcji backward</h3>
+<p>Matematycznie można na to spojrzeć w ten sposób: <span
+class="math inline">\(x = T_1 +T_2\)</span> <span
+class="math display">\[\begin{equation}
+    \frac{dx}{dT_1} = 1
+\end{equation}\]</span></p>
+<p><span class="math display">\[\begin{equation}
+    \frac{dx}{dT_2} = 1
+\end{equation}\]</span> Lokalna pochodna tego wyrażenia od każdej ze
+zmiennych jest równa jeden. Dlatego zgodnie z zasada łańcuchową, te
+pochodne mnożone są przez spływjącą pochodną.</p>
+<p>Analogicznie zostało do wykonane dla wszystkich potrzenych
+operatorów.</p>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu Python przedstawiający nadpisanie podstawowej operacji dla klasy Tensor."
+data-label="lst:matlab_and"><code>def __mul__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        
+        out = Tensor(self.data * other.data, (self, other), &#39;*&#39;)
+
+        def _backward():
+
+                self.grad += other.data * out.grad
+                other.grad += self.data * out.grad
+                
+        out._backward = _backward
+
+        return out</code></pre>
+<p>Przykład dla mnożenia. Znowu matematycznie można na to spojrzeć w
+następujący sposób: <span class="math inline">\(x = T_1 * T_2\)</span>
+<span class="math display">\[\begin{equation}
+    \frac{dx}{dT_1} = T_2
+\end{equation}\]</span></p>
+<p><span class="math display">\[\begin{equation}
+    \frac{dx}{dT_2} = T_1
+\end{equation}\]</span></p>
+<p>Dlatego pochodne zgodnie z regułą łąńcuchową po przemnożeniu przez
+spływającą z góry pochodną wyglądają następująco. <span
+class="math display">\[\begin{equation}
+    \frac{\partial E}{\partial T_1} = T_2 * \delta
+\end{equation}\]</span> <span class="math display">\[\begin{equation}
+    \frac{\partial E}{\partial T_2} = T_1 * \delta
+\end{equation}\]</span></p>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu Python przedstawiający nadpisanie podstawowej operacji dla klasy Tensor."
+data-label="lst:matlab_and"><code>def exp(self):
+
+        out = Tensor(np.exp(self.data), (self,), &#39;exp&#39;)
+        def _backward():
+            self.grad += out.data * out.grad
+        out._backward = _backward
+        return out</code></pre>
+<h2 id="obiektowa-struktura-sieci-neuronowej">Obiektowa struktura sieci
+neuronowej</h2>
+<p>Aby kod był czytelny i łatwy w rozbudowie, sieć neuronową podzielono
+na dwie główne klasy. Dzięki temu można budować modele o dowolnej
+wielkości, układając je z gotowych modułów.</p>
+<h3 id="pojedyncza-warstwa-klasa-linear">Pojedyncza warstwa (Klasa
+<code>Linear</code>)</h3>
+<p>Klasa ta reprezentuje jedną warstwę neuronów, warstwę w pełni
+połączoną.</p>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu Python przedstawiający jedną warstwę neuronów."
+data-label="lst:matlab_and"><code>class Linear:
+    def __init__(self, nin, nout):
+        
+
+        self.w = Tensor(np.random.randn(nin, nout))
+        self.b = Tensor(np.zeros(nout))
+
+    def __call__(self, X):
+
+        out = X @ self.w + self.b
+        return out
+
+    def parameters(self):
+        return [self.w, self.b]
+        </code></pre>
+<ul>
+<li><p><strong>Inicjalizacja (<code>__init__</code>):</strong> Tworzy
+macierz wag (zainicjowaną małymi, losowymi wartościami) oraz wektor
+obciążeń.</p></li>
+<li><p><strong>Przepływ sygnału (<code>__call__</code>):</strong>
+Przepuszcza dane przez warstwę, wykonując podstawowe równanie: <span
+class="math inline">\(\bm{Y} = \bm{X} \bm{W} + \bm{b}\)</span>.</p></li>
+<li><p><strong>parameters</strong> zwraca parametry, w celu ich
+aktualizacji</p></li>
+</ul>
+<h3 id="połączona-sieć-klasa-mlp">Połączona sieć (Klasa
+<code>MLP</code>)</h3>
+<p>Klasa <code>MLP</code> łączy pojedyncze warstwy w kompletną, gotową
+do działania sieć.</p>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu Python przedstawiający wielowarstwowy Percetpron."
+data-label="lst:matlab_and"><code>class MLP:
+    def __init__(self, nin, nouts, dropout_p = 0.2):
+        sz = [nin] + nouts
+        self.layers = [Linear(sz[i], sz[i+1]) for i in range(len(nouts))]
+
+
+    def __call__(self, X):
+
+        for i, layer in enumerate(self.layers):
+
+            X = layer(X)
+
+            if i &lt; len(self.layers) - 1:
+                X = X.relu()
+        return X
+    
+    def parameters(self):
+        
+        params = []
+        for layer in self.layers:
+            params.extend(layer.parameters())
+
+        return params
+
+    </code></pre>
+<ul>
+<li><p><strong>Tworzenie struktury (<code>__init__</code>):</strong> Na
+podstawie podanych wymiarów tworzy listę kolejnych warstw typu
+<code>Linear</code>.</p></li>
+<li><p><strong>Działanie sieci (<code>__call__</code>):</strong> Pobiera
+dane wejściowe i przekazuje je po kolei przez wszystkie warstwy.
+Następnie dla ostatniej warstwy stosuje funkcje aktywacji ReLU.</p></li>
+<li><p><strong>Zbieranie parametrów (<code>parameters</code>):</strong>
+Analogicznie jak w przypadku klasy Linear, zwracane są parametry w celu
+ich aktualizacji.</p></li>
+</ul>
+<h3 id="implementacja-grafu">Implementacja grafu</h3>
+<p>Opisywany wcześniej acykliczny graf skierowany w pythonowej
+implementacji powstaje po przepływie sygnału w przód. Struktura
+przyjmuje formę pythonowej listy, która tworzona jest w oparciu o
+rekurencyjną implementację algorytmu DFS. Wykorzystując przypisanych
+przodków do obiektów typu danych Tensor.</p>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu Python przedstawiający jedną warstwę neuronów."
+data-label="lst:matlab_and"><code>
+ def backward(self):
+        topo = []
+        visited = set()
+        def build_topo(value):
+            if value not in visited:
+                visited.add(value)
+                for child in value._prev:
+                    build_topo(child)
+                topo.append(value)
+    
+        build_topo(self)
+        </code></pre>
+<p>Następnie elementem wyzwalającym propagację wsteczną jest odwrócenie
+powstałej listy i wywołanie na każdej z jej elementów, odpowiedniej
+funkcji obliczającej pochodną lokalną.</p>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu Python przedstawiający początek propagacji wstecznej"
+data-label="lst:matlab_and"><code>self.grad = 1.0
+        for x in reversed(topo):
+            x._backward()</code></pre>
+<p>Zaprezentowane implementacja, przetestowana zostanie na dwówch
+zbiorach danych.</p>
+<h1 id="test-na-mnnist">Test na MNNIST</h1>
+<p>Test silnika autograd na opisywanym wcześniej zbiorze danych MNIST.
+Topologia trenowanego perceptronu to:<span
+class="math inline">\(784-128-64-10\)</span>Algorytm optymalizacyjny
+zastosowany w tej pętli jest taki sam jak dla kodu Matlabowego. Pętla
+ucząca wygląda następująco</p>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu Python przedstawiający jedną warstwę neuronów."
+data-label="lst:matlab_and"><code>
+ batch_size = 64
+n_samples = x_train.shape[0]
+learning_rate = 0.01
+
+
+optimizer = SGD(m.parameters())
+
+for epoch in range(20):
+
+    sum_loss = 0.0
+    batch_count = 0.0
+
+    lr = learning_rate * (0.9 ** epoch)
+    
+    r_indexes = np.random.permutation(n_samples)
+
+    for i in range(0, n_samples, batch_size):
+
+        batch_indexes = r_indexes[i: i +64]
+
+        X_batch = Tensor(X_train.data[batch_indexes])
+        Y_batch = Tensor(Y_train.data[batch_indexes])
+
+        optimizer.zero_grad()
+
+        ypreds = m(X_batch)
+
+        loss, prawdopodobienstwa = cross_entropy_loss(ypreds, Y_batch)
+
+        loss.backward()
+
+        optimizer.step()
+        </code></pre>
+<p>Gdzie SGD jest zaimplementowaną klasą pomocniczą przygotowywującą kod
+na testy róznych optymalizatorów</p>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu Python przedstawiający klasę abstrakcyjną optymalizatora."
+data-label="lst:matlab_and"><code>from abc import ABC, abstractmethod
+
+class Optimizer:
+    def __init__(self, parameters, learning_rate=0.001):
+        self.parameters = parameters
+        self.learning_rate = learning_rate
+    def zero_grad(self):
+        for p in self.parameters:
+            p.grad = np.zeros_like(p.data)
+    @abstractmethod
+    def step(self):
+        pass
+
+        </code></pre>
+<pre id="lst:matlab_and"
+data-caption="Fragment kodu Python przedstawiający klasę SGD."
+data-label="lst:matlab_and"><code>
+class SGD(Optimizer):
+    def __init__(self, parameters ,learning_rate=0.001):
+        super().__init__(parameters, learning_rate)
+        self.momentum = 0.9
+
+    def step(self):
+
+        for p in self.parameters:
+            p.data += -self.learning_rate*p.grad
+
+        </code></pre>
+<p>Czas trenowania, czyli czas w którym przez sieć przechodzi sygnał w
+przód i wstecz wraz ze zmianą parametrów dla każdej z par treningowych
+trwa około 15 sekund na chipie M4 macbooka pro.</p>
+<div id="tab:loss_history">
+<table>
+<caption>Zestawienie spadku wartości funkcji straty w wybranych epokach
+procesu uczenia</caption>
+<thead>
+<tr>
+<th style="text-align: center;"><strong>Epoka (Epoch)</strong></th>
+<th style="text-align: center;"><strong>Wartość funkcji straty
+(Loss)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">5</td>
+<td style="text-align: center;">0.07254</td>
+</tr>
+<tr>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">0.02795</td>
+</tr>
+<tr>
+<td style="text-align: center;">15</td>
+<td style="text-align: center;">0.01500</td>
+</tr>
+<tr>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">0.01073</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Po fazie uczenia przetestowano recall perceptronu dla dwóch zbiórów.
+Zbioru testowego i treningowego, czyli tego na, którym odbywała się faza
+uczenia. Zbiór testowy składa się z 10 tysięcy elementów.</p>
+<div id="tab:wyniki_dokladnosci_mnist">
+<table>
+<caption>Porównanie skuteczności klasyfikacji (Accuracy) dla zbioru
+treningowego i testowego bazy MNIST</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>Zbiór danych</strong></th>
+<th style="text-align: center;"><strong>Liczba próbek</strong></th>
+<th style="text-align: center;"><strong>Poprawne predykcje</strong></th>
+<th style="text-align: center;"><strong>Dokładność</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Treningowy</td>
+<td style="text-align: center;">60 000</td>
+<td style="text-align: center;">59 819</td>
+<td style="text-align: center;"><strong>99.70%</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">Testowy</td>
+<td style="text-align: center;">10 000</td>
+<td style="text-align: center;">9 780</td>
+<td style="text-align: center;"><strong>97.80%</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>W celu dalszej weryfikacji predykcji sieci, zwizualizowano losowe
+próbki.</p>
+<figure id="fig:matlab_plot" data-latex-placement="H">
+<img src="mnist_test.png" style="width:85.0%" />
+<figcaption>Wizualizacja predykcji sieci.</figcaption>
+</figure>
+<h1 id="test-na-fashion-mnist">Test na fashion MNIST</h1>
+<p>Drugi ropatrywany zbiór danych jest zbiorem bliźniaczo podobnym do
+oryginalnego MNISTA. Format danych jak i ilość jest identyczna. Też mamy
+tu doczynienia z 10 klasami, rozmiarem <span
+class="math inline">\(28\times28\)</span> i ilościa 60000 elementów w
+zbiorze testowym. Różnica polega na tym, że zamiast cyfr, w zbiorze
+zawierają się obrazy ubrań, które z natury są bardziej skomplikowane i
+trudniejsze do klasyfikacji dla wielowarstwowego perceptronu. Wynika to
+z większej możliwej różnorodności przykładów w porównaniu do cyfr. Co
+pokazują przeprowadzone testy.</p>
+<p>Pętla treningowa wygląda identycznie jak w przypadku klasycznego
+MNIST</p>
+<div id="tab:wyniki_dokladnosci_fashion_mnist">
+<table>
+<caption>Porównanie skuteczności klasyfikacji dla zbioru treningowego i
+testowego bazy Fashion MNIST</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>Zbiór danych</strong></th>
+<th style="text-align: center;"><strong>Liczba próbek</strong></th>
+<th style="text-align: center;"><strong>Poprawne predykcje</strong></th>
+<th style="text-align: center;"><strong>Dokładność</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Treningowy</td>
+<td style="text-align: center;">60 000</td>
+<td style="text-align: center;">55 860</td>
+<td style="text-align: center;"><strong>93.10%</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">Testowy</td>
+<td style="text-align: center;">10 000</td>
+<td style="text-align: center;">8 881</td>
+<td style="text-align: center;"><strong>88.81%</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Jak widać przypuszczenia gorszej skuteczności perceptronu
+wielowarstwowego dla bardziej skomplikowanych zostały potwierdzone. Dla
+pewności przetestowana została również większa liczba epok, zwiększkono
+ją do 50 co jak widać w tabeli poniżej nie przyniosło oczekiwanych
+rezultatów.</p>
+<div id="tab:wyniki_dokladnosci_nowe">
+<table>
+<caption>Porównanie skuteczności klasyfikacji (Accuracy) dla nowego
+wariantu uczenia sieci</caption>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>Zbiór danych</strong></th>
+<th style="text-align: center;"><strong>Liczba próbek</strong></th>
+<th style="text-align: center;"><strong>Poprawne predykcje</strong></th>
+<th style="text-align: center;"><strong>Dokładność</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Treningowy</td>
+<td style="text-align: center;">60 000</td>
+<td style="text-align: center;">58 589</td>
+<td style="text-align: center;"><strong>97.65%</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">Testowy</td>
+<td style="text-align: center;">10 000</td>
+<td style="text-align: center;">8 919</td>
+<td style="text-align: center;"><strong>89.19%</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Można zaobserwować znaczny wzrost w dokładności predykcji
+dokonywanych na zbiorze treningowym. Wynika to z uczenia się perceptronu
+"na pamięć", co nazywane jest przeuczeniem sieci i jest zjawiskiem nie
+pożądanym. Okolice osiągnietego wyniku <span
+class="math inline">\(90\%\)</span> są maksimum dla architektury
+wielowarstwowego percetpronu.</p>
+<figure id="fig:matlab_plot" data-latex-placement="H">
+<img src="fashion_mnist.png" style="width:85.0%" />
+<figcaption>Wizualizacja predykcji sieci.</figcaption>
+</figure>
+<div class="thebibliography">
+<p><span>9</span></p>
+<p>Rosenblatt, F. (1958). <em>The perceptron: A probabilistic model for
+information storage and organization in the brain.</em> Psychological
+Review, 65(6), 386–408.</p>
+<p>McCulloch, W. S., &amp; Pitts, W. (1943). <em>A logical calculus of
+the ideas immanent in nervous activity</em>. The bulletin of
+mathematical biophysics, 5(4), 115–133.</p>
+<p>Zurada, J. M. (1992). <em>Introduction to Artificial Neural
+Systems</em>. West Publishing Company, St. Paul.</p>
+<p>Rumelhart, D. E., Hinton, G. E., &amp; Williams, R. J. (1986).
+Learning representations by back-propagating errors. <em>Nature</em>,
+323(6088), 533–536.</p>
+</div>
+</body>
+</html>
